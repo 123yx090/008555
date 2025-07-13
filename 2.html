@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微信安全中心 - 病毒警报</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        
+        body {
+            background: #000;
+            color: #e6e6e6;
+            min-height: 100vh;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: none;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+            z-index: 10;
+            background: #121212;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .status-bar {
+            height: 30px;
+            background: #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 12px;
+            color: #fff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 100;
+        }
+        
+        .time {
+            font-weight: bold;
+        }
+        
+        .status-icons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        /* 病毒入侵效果 */
+        .virus-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(255, 0, 0, 0.05),
+                rgba(255, 0, 0, 0.05) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 5;
+            display: none;
+        }
+        
+        .virus-text {
+            position: absolute;
+            color: #ff0000;
+            font-family: monospace;
+            font-size: 14px;
+            opacity: 0.7;
+            text-shadow: 0 0 5px rgba(255,0,0,0.5);
+        }
+        
+        /* 主内容 */
+        .header {
+            text-align: center;
+            padding: 50px 20px 20px;
+            background: linear-gradient(to bottom, #1e1e1e, #121212);
+            border-bottom: 1px solid #333;
+            position: relative;
+            z-index: 10;
+            margin-top: 30px;
+        }
+        
+        .logo {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #07c160 0%, #059c47 100%);
+            border-radius: 18px;
+            margin: 0 auto 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(7, 193, 96, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo i {
+            font-size: 36px;
+            color: white;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logo::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,0,0,0.3), transparent);
+            animation: logoGlitch 5s infinite linear;
+            z-index: 1;
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, #ff6b6b, #ff8e53);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+            animation: textGlitch 3s infinite;
+        }
+        
+        .subtitle {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        
+        .alert-card {
+            background: linear-gradient(135deg, #2c2c54 0%, #1d1d3d 100%);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #ff0000;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .alert-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(to right, #ff0000, #ff5252);
+        }
+        
+        .alert-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-title i {
+            font-size: 28px;
+            color: #ff6b6b;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .alert-title h2 {
+            font-size: 20px;
+            color: #ff6b6b;
+        }
+        
+        .alert-content {
+            line-height: 1.6;
+            margin-bottom: 25px;
+            font-size: 15px;
+        }
+        
+        .alert-content p {
+            margin-bottom: 15px;
+        }
+        
+        .highlight {
+            color: #ff9f43;
+            font-weight: bold;
+        }
+        
+        .danger {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        
+        .threat-list {
+            list-style: none;
+            margin: 20px 0;
+            padding: 0;
+        }
+        
+        .threat-list li {
+            padding: 12px 15px;
+            background: rgba(231, 76, 60, 0.1);
+            border-left: 3px solid #e74c3c;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .threat-list i {
+            color: #e74c3c;
+        }
+        
+        .scan-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 20px;
+            text-align: center;
+            border: 1px dashed #ff0000;
+            position: relative;
+        }
+        
+        .scan-title {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #3498db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .radar {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 25px;
+            position: relative;
+            border-radius: 50%;
+            background: 
+                radial-gradient(circle, transparent 65%, rgba(52, 152, 219, 0.1) 100%),
+                repeating-radial-gradient(circle, transparent, transparent 7px, rgba(52, 152, 219, 0.1) 8px, rgba(52, 152, 219, 0.1) 12px);
+            box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.3),
+                        inset 0 0 20px rgba(52, 152, 219, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .radar::before {
+            content: "";
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            background: linear-gradient(45deg, transparent, rgba(52, 152, 219, 0.6), transparent);
+            top: 0;
+            left: 0;
+            border-radius: 100% 0 0 0;
+            animation: radar-sweep 3s linear infinite;
+            transform-origin: 100% 100%;
+        }
+        
+        .scan-button {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 auto;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scan-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.6);
+        }
+        
+        .scan-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: buttonGlow 2s infinite;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 12px;
+            border-top: 1px solid #333;
+            margin-top: auto;
+            background: #121212;
+        }
+        
+        .warning-message {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            transform: translateY(100%);
+            transition: transform 0.5s ease;
+            z-index: 100;
+            animation: warningPulse 2s infinite;
+        }
+        
+        .warning-message.show {
+            transform: translateY(0);
+        }
+        
+        .threat-found {
+            display: none;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px 20px;
+            text-align: center;
+            margin: 20px;
+            border-radius: 20px;
+            border: 2px solid #e74c3c;
+            animation: pulse 2s infinite;
+        }
+        
+        .threat-found.show {
+            display: block;
+        }
+        
+        .solution-button {
+            background: linear-gradient(to right, #07c160, #059c47);
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 25px auto 10px;
+            box-shadow: 0 5px 15px rgba(7, 193, 96, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .solution-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: buttonGlow 2s infinite;
+        }
+        
+        /* 无法退出效果 */
+        .lock-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #ff0000;
+            text-align: center;
+            padding: 20px;
+            cursor: not-allowed;
+        }
+        
+        .lock-overlay.show {
+            display: flex;
+        }
+        
+        .lock-icon {
+            font-size: 80px;
+            margin-bottom: 30px;
+            animation: lockPulse 1s infinite;
+        }
+        
+        .lock-message {
+            font-size: 28px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            max-width: 80%;
+        }
+        
+        .lock-timer {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #ff5252;
+        }
+        
+        /* 搞笑结局 */
+        .funny-end {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 3000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .funny-end h2 {
+            font-size: 36px;
+            color: #ff0;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+            animation: funnyText 2s infinite;
+        }
+        
+        .funny-end p {
+            font-size: 24px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .restart-btn {
+            background: linear-gradient(to right, #ff00cc, #3333ff);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 20px;
+            margin-top: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        
+        /* 病毒动画 */
+        @keyframes logoGlitch {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes textGlitch {
+            0% { transform: translateX(0); }
+            10% { transform: translateX(-2px); }
+            20% { transform: translateX(2px); }
+            30% { transform: translateX(0); }
+            40% { transform: skewX(5deg); }
+            50% { transform: skewX(-5deg); }
+            60% { transform: skewX(0); }
+            100% { transform: translateX(0); }
+        }
+        
+        @keyframes radar-sweep {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { 
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 0 15px rgba(231, 76, 60, 0);
+                transform: scale(1.02);
+            }
+            100% { 
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes warningPulse {
+            0% { background-color: rgba(231, 76, 60, 0.9); }
+            50% { background-color: rgba(192, 57, 43, 0.9); }
+            100% { background-color: rgba(231, 76, 60, 0.9); }
+        }
+        
+        @keyframes buttonGlow {
+            100% { left: 100%; }
+        }
+        
+        @keyframes funnyText {
+            0% { transform: scale(1); color: #ff0; }
+            50% { transform: scale(1.1); color: #ff5252; }
+            100% { transform: scale(1); color: #ff0; }
+        }
+        
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        
+        @keyframes lockPulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 480px) {
+            .alert-card {
+                margin: 15px;
+                padding: 20px;
+            }
+            
+            .radar {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .lock-message {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 病毒入侵效果 -->
+    <div class="virus-overlay" id="virusOverlay"></div>
+    
+    <!-- 无法退出效果 -->
+    <div class="lock-overlay" id="lockOverlay">
+        <div class="lock-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        <div class="lock-message">
+            系统已被病毒完全锁定！无法退出页面
+        </div>
+        <div class="lock-message">
+            请等待安全扫描完成
+        </div>
+        <div class="lock-timer" id="lockTimer">50</div>
+        <div class="lock-message">
+            剩余时间
+        </div>
+    </div>
+    
+    <!-- 搞笑结局 -->
+    <div class="funny-end" id="funnyEnd">
+        <h2>整蛊成功！</h2>
+        <p>哈哈，你被整蛊啦！</p>
+        <p>你的手机并没有中病毒，微信也很安全</p>
+        <p>这只是个玩笑，别紧张~</p>
+        <p>分享给你的好友，一起乐一乐吧！</p>
+        <button class="restart-btn" id="finalRestart">再玩一次</button>
+    </div>
+    
+    <div class="status-bar">
+        <div class="time">14:25</div>
+        <div class="status-icons">
+            <i class="fas fa-signal"></i>
+            <i class="fas fa-wifi"></i>
+            <i class="fas fa-battery-three-quarters"></i>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <i class="fab fa-weixin"></i>
+            </div>
+            <h1>微信安全中心</h1>
+            <div class="subtitle">⚠️ 检测到严重安全威胁 ⚠️</div>
+        </div>
+        
+        <div class="alert-card">
+            <div class="alert-title">
+                <i class="fas fa-radiation"></i>
+                <h2>病毒入侵警报</h2>
+            </div>
+            
+            <div class="alert-content">
+                <p>检测到您的设备感染了<span class="highlight">高危病毒：Worm.WeChat.666</span>！</p>
+                
+                <p>病毒已控制您的设备：<span class="danger">摄像头已被激活 | 麦克风已被访问</span></p>
+                
+                <p>您的个人信息面临以下风险：</p>
+                
+                <ul class="threat-list">
+                    <li><i class="fas fa-bug"></i> 银行账户信息已被窃取</li>
+                    <li><i class="fas fa-user-secret"></i> 所有聊天记录正在被上传</li>
+                    <li><i class="fas fa-money-bill-wave"></i> 支付功能已被完全控制</li>
+                    <li><i class="fas fa-camera"></i> 摄像头被远程控制中</li>
+                </ul>
+                
+                <p>若不立即处理，您的设备将在<span class="danger">5分钟</span>后永久锁定！</p>
+            </div>
+        </div>
+        
+        <div class="scan-container">
+            <div class="scan-title">
+                <i class="fas fa-shield-alt"></i>
+                <span>立即进行病毒清除</span>
+            </div>
+            
+            <div class="radar"></div>
+            
+            <button class="scan-button" id="startScan">
+                <i class="fas fa-search"></i>
+                立即扫描清除
+            </button>
+        </div>
+        
+        <div class="threat-found" id="threatResult">
+            <i class="fas fa-skull-crossbones" style="font-size: 48px; color: #e74c3c; margin-bottom: 20px;"></i>
+            <h2 style="color: #e74c3c; margin-bottom: 15px;">发现高危病毒！</h2>
+            <p>检测到系统级病毒：<span class="danger">Worm.WeChat.666</span></p>
+            <p>该病毒已完全控制您的设备，正在上传您的所有数据！</p>
+            
+            <button class="solution-button" id="fixSolution">
+                <i class="fas fa-lock"></i>
+                立即激活终极防护
+            </button>
+            
+            <p style="margin-top: 20px; font-size: 12px; color: #aaa;">⚠️ 请勿关闭此页面，否则您的设备将被永久锁定</p>
+        </div>
+        
+        <div class="footer">
+            <p>微信安全中心 · 腾讯公司</p>
+            <p style="margin-top: 5px;">Copyright © 2011-2023 Tencent Inc. All Rights Reserved.</p>
+        </div>
+    </div>
+    
+    <div class="warning-message" id="warningMsg">
+        <i class="fas fa-exclamation-triangle"></i> 紧急警告：您的设备已被病毒完全控制！
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startScanBtn = document.getElementById('startScan');
+            const threatResult = document.getElementById('threatResult');
+            const warningMsg = document.getElementById('warningMsg');
+            const fixSolutionBtn = document.getElementById('fixSolution');
+            const virusOverlay = document.getElementById('virusOverlay');
+            const funnyEnd = document.getElementById('funnyEnd');
+            const finalRestart = document.getElementById('finalRestart');
+            const lockOverlay = document.getElementById('lockOverlay');
+            const lockTimer = document.getElementById('lockTimer');
+            
+            // 初始警告消息
+            setTimeout(() => {
+                warningMsg.classList.add('show');
+                
+                // 随机触发病毒效果
+                setInterval(() => {
+                    if (Math.random() > 0.7) {
+                        triggerVirusEffect();
+                    }
+                }, 3000);
+            }, 1000);
+            
+            // 阻止退出功能
+            function preventExit() {
+                // 禁用右键菜单
+                document.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    triggerLock();
+                });
+                
+                // 阻止键盘快捷键
+                document.addEventListener('keydown', function(e) {
+                    // 阻止 F12、Ctrl+Shift+I、Ctrl+Shift+J、Ctrl+U 等
+                    if (e.key === 'F12' || 
+                        (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                        (e.ctrlKey && e.shiftKey && e.key === 'J') || 
+                        (e.ctrlKey && e.key === 'U') ||
+                        (e.ctrlKey && e.key === 'w') ||
+                        e.key === 'Escape') {
+                        e.preventDefault();
+                        triggerLock();
+                    }
+                });
+                
+                // 阻止关闭页面
+                window.addEventListener('beforeunload', function(e) {
+                    triggerLock();
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '系统已被病毒锁定！无法退出页面';
+                });
+                
+                // 阻止离开页面
+                window.addEventListener('unload', function(e) {
+                    e.preventDefault();
+                    triggerLock();
+                });
+            }
+            
+            // 触发锁定效果
+            function triggerLock() {
+                lockOverlay.classList.add('show');
+                
+                // 开始倒计时
+                let seconds = 50;
+                lockTimer.textContent = seconds;
+                
+                const countdown = setInterval(() => {
+                    seconds--;
+                    lockTimer.textContent = seconds;
+                    
+                    if (seconds <= 0) {
+                        clearInterval(countdown);
+                        lockOverlay.classList.remove('show');
+                    }
+                }, 1000);
+                
+                // 添加病毒效果
+                virusOverlay.style.display = 'block';
+                document.body.style.animation = 'shake 0.5s infinite';
+                
+                // 10秒后解除锁定效果
+                setTimeout(() => {
+                    lockOverlay.classList.remove('show');
+                    virusOverlay.style.display = 'none';
+                    document.body.style.animation = '';
+                }, 10000);
+            }
+            
+            // 病毒效果
+            function triggerVirusEffect() {
+                virusOverlay.style.display = 'block';
+                document.body.style.animation = 'shake 0.5s';
+                
+                setTimeout(() => {
+                    virusOverlay.style.display = 'none';
+                    document.body.style.animation = '';
+                }, 800);
+            }
+            
+            // 开始扫描按钮点击事件
+            startScanBtn.addEventListener('click', function() {
+                // 显示加载效果
+                startScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 扫描中...';
+                startScanBtn.disabled = true;
+                
+                // 激活防止退出机制
+                preventExit();
+                
+                // 模拟扫描过程
+                setTimeout(() => {
+                    // 添加病毒效果
+                    virusOverlay.style.display = 'block';
+                    
+                    // 显示威胁结果
+                    setTimeout(() => {
+                        threatResult.classList.add('show');
+                        virusOverlay.style.display = 'none';
+                        
+                        // 滚动到结果位置
+                        threatResult.scrollIntoView({behavior: 'smooth'});
+                        
+                        // 添加新的警告
+                        warningMsg.textContent = "⚠️ 检测到高危病毒，设备即将锁定！";
+                    }, 1500);
+                }, 3000);
+            });
+            
+            // 解决方案按钮点击事件
+            fixSolutionBtn.addEventListener('click', function() {
+                // 触发强烈病毒效果
+                virusOverlay.style.display = 'block';
+                document.body.style.animation = 'shake 0.5s infinite';
+                
+                // 显示倒计时
+                warningMsg.textContent = "⚠️ 设备将在5秒后永久锁定！";
+                
+                // 倒计时
+                let count = 5;
+                const countdownInterval = setInterval(() => {
+                    warningMsg.textContent = `⚠️ 设备将在${count}秒后永久锁定！`;
+                    count--;
+                    
+                    if (count < 0) {
+                        clearInterval(countdownInterval);
+                        
+                        // 隐藏其他元素
+                        document.querySelector('.container').style.display = 'none';
+                        warningMsg.classList.remove('show');
+                        virusOverlay.style.display = 'none';
+                        document.body.style.animation = '';
+                        
+                        // 显示搞笑结局
+                        setTimeout(() => {
+                            funnyEnd.style.display = 'flex';
+                        }, 500);
+                    }
+                }, 1000);
+            });
+            
+            // 最终重新开始按钮
+            finalRestart.addEventListener('click', function() {
+                location.reload();
+            });
+            
+            // 更新状态栏时间
+            function updateTime() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                document.querySelector('.time').textContent = `${hours}:${minutes}`;
+            }
+            
+            updateTime();
+            setInterval(updateTime, 60000);
+            
+            // 初始随机病毒效果
+            setInterval(triggerVirusEffect, 5000);
+            
+            // 防止用户使用开发者工具
+            function detectDevTools() {
+                const devtools = /./;
+                devtools.toString = function() {
+                    triggerLock();
+                    return '';
+                }
+                console.log('%c', devtools);
+            }
+            
+            setInterval(detectDevTools, 1000);
+        });
+    </script>
+</body>
+</html>
